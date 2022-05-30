@@ -37,7 +37,7 @@ import Data.Maybe (fromMaybe)
 -- | A Partition of @a@: represents a collection of disjoint sets of @a@ whose
 -- union includes every element of @a@.  Semantics: @[[Partition a]] = P(P(a))@
 -- where @P@ is the power set operation.
-data Partition a 
+data Ord a => Partition a 
     = Partition { forwardMap :: Map.Map a a, backwardMap :: Map.Map a (Set.Set a) }
     deriving (Eq, Ord)  -- Since the representative is always the least element,
                         -- we have a canonical representation and Eq is meaningful.
@@ -62,7 +62,7 @@ empty = discrete
 -- not checked.
 -- 
 -- /O/ (/n/ log /n/), where /n/ is the total number of elements in the given sets.
-fromDisjointSets :: (Ord a) => [Set.Set a] -> Partition a
+fromDisjointSets :: [Set.Set a] -> Partition a
 fromDisjointSets sets = Partition { 
         forwardMap = Map.fromList [ (x, Set.findMin s) | s <- sets', x <- Set.toList s ],
         backwardMap = Map.fromList [ (Set.findMin s, s) | s <- sets' ]
@@ -76,7 +76,7 @@ fromDisjointSets sets = Partition {
 -- 
 --   /O/ (/n/ /k/ log /n/), where /k/ is the maximum set-size and /n/ = /l/ /k/ is
 --   the total number of non-discrete elements.
-fromSets :: (Ord a) => [Set.Set a] -> Partition a
+fromSets :: [Set.Set a] -> Partition a
 fromSets = foldr joins discrete
  where joins set | (p0:ps) <- Set.toList set
                     = foldr ((.) . joinElems p0) id ps
@@ -100,7 +100,7 @@ nontrivialRepresentatives = Map.keys . backwardMap
 -- 
 -- /O/ (max(/k/ log /n/, /k/ log /k/)), where /k/ is the size of nontrivial subsets
 -- and /n/ is the total number of elements in such sets.
-joinElems :: (Ord a) => a -> a -> Partition a -> Partition a
+joinElems :: a -> a -> Partition a -> Partition a
 joinElems x y p = case compare x' y' of
                  LT -> go x' y'
                  EQ -> p
@@ -121,20 +121,20 @@ joinElems x y p = case compare x' y' of
 -- | @areJoined p x y@ returns whether @x@ and @y@ are members of the same partition.
 --
 -- @areJoined p x y = rep p x == rep p y@.
-areJoined :: (Ord a) => Partition a -> a -> a -> Bool
+areJoined :: Partition a -> a -> a -> Bool
 areJoined p x y = rep p x == rep p y
 
 -- | @find p x@ finds the set that the element @x@ is associated with.  Semantics: 
 -- @[[find p x]] = the unique s in p such that x in s@.
-find :: (Ord a) => Partition a -> a -> Set.Set a
+find :: Partition a -> a -> Set.Set a
 find p = repFind p . rep p
 
 -- | @rep p x@ finds the minimum element in the set containing @x@.
-rep :: (Ord a) => Partition a -> a -> a
+rep :: Partition a -> a -> a
 rep p x = fromMaybe x (Map.lookup x (forwardMap p))
 
 -- Find the set that x is in given that x is already a representative element.
-repFind :: (Ord a) => Partition a -> a -> Set.Set a
+repFind :: Partition a -> a -> Set.Set a
 repFind p x = fromMaybe (Set.singleton x) (Map.lookup x (backwardMap p))
 
 compose :: [a -> a] -> a -> a
